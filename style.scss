@@ -24,8 +24,9 @@ body {
   background-position: center; /* 图片居中 */
   background-repeat: no-repeat; /* 不重复 */
   background-attachment: fixed; /* 固定背景 */
+  font-family: 'Segoe UI', Arial, sans-serif; /* VS Code 界面风格 */
   font: 18px/1.4 $helvetica;
-  color: #ffffff; /* 白色文字，确保在灰色背景上可读 */
+  color: $darkGray;
 }
 
 .container {
@@ -38,7 +39,7 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: $helveticaNeue;
+  font-family: 'Segoe UI', Arial, sans-serif; /* 标题使用相同字体 */
   color: $darkerGray;
   font-weight: bold;
 
