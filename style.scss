@@ -18,9 +18,14 @@ html {
 }
 
 body {
-	background: $white;
+  background-color: #808080; /* 灰色背景 */
+  background-image: url('./images/huayu.jpg'); /* 背景图片 */
+  background-size: cover; /* 图片铺满 */
+  background-position: center; /* 图片居中 */
+  background-repeat: no-repeat; /* 不重复 */
+  background-attachment: fixed; /* 固定背景 */
   font: 18px/1.4 $helvetica;
-  color: $darkGray;
+  color: #ffffff; /* 白色文字，确保在灰色背景上可读 */
 }
 
 .container {
