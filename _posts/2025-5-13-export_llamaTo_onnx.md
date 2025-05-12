@@ -1,4 +1,8 @@
-## Export llama To onnx
+---
+layout: post
+title: Export llama To onnx
+---
+
 ### 主要是ONNX 不直接支持嵌套结构作为输入。输入只能是张量或张量列表，对于llama这类大模型的输入包括past_key_values的情况，现在只能自定义实现把嵌套结构和类对象转换成张量列表；
 
 ```python
