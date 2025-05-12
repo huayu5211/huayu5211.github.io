@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Minicpm-o-Torch导出onnx
+title: Minicpm导出onnx
 ---
 
 ### 1,torch.onnx.export:
