@@ -6,6 +6,19 @@ title: Transformer架构介绍
 # Transformer架构介绍
 
 ## 1.整体结构
+1. 通过tokenizer将输入文本转换为input_ids
+
+2. 将input_ids转换为embedding并添加position encoding，得到最终的输入表示
+
+3. 通过[MHA模块](https://zhida.zhihu.com/search?content_id=253530996&content_type=Article&match_order=1&q=MHA模块&zd_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ6aGlkYV9zZXJ2ZXIiLCJleHAiOjE3NDA1MzYyNzMsInEiOiJNSEHmqKHlnZciLCJ6aGlkYV9zb3VyY2UiOiJlbnRpdHkiLCJjb250ZW50X2lkIjoyNTM1MzA5OTYsImNvbnRlbnRfdHlwZSI6IkFydGljbGUiLCJtYXRjaF9vcmRlciI6MSwiemRfdG9rZW4iOm51bGx9.N4P964mOrqEdzepLRiWG-_LSMYBQx4TbXBOdOMATvT4&zhida_source=entity)计算Q、K、V的注意力权重并加权求和
+
+4. 通过[FFN模块](https://zhida.zhihu.com/search?content_id=253530996&content_type=Article&match_order=1&q=FFN模块&zd_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ6aGlkYV9zZXJ2ZXIiLCJleHAiOjE3NDA1MzYyNzMsInEiOiJGRk7mqKHlnZciLCJ6aGlkYV9zb3VyY2UiOiJlbnRpdHkiLCJjb250ZW50X2lkIjoyNTM1MzA5OTYsImNvbnRlbnRfdHlwZSI6IkFydGljbGUiLCJtYXRjaF9vcmRlciI6MSwiemRfdG9rZW4iOm51bGx9.RnrfylUadonq4Nq5VAACRi9PTH1VZK2x2ZFr2DMj2-M&zhida_source=entity)进一步处理自注意力输出。
+
+5. 添加残差模块并通过[LayerNorm](https://zhida.zhihu.com/search?content_id=253530996&content_type=Article&match_order=1&q=LayerNorm&zd_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ6aGlkYV9zZXJ2ZXIiLCJleHAiOjE3NDA1MzYyNzMsInEiOiJMYXllck5vcm0iLCJ6aGlkYV9zb3VyY2UiOiJlbnRpdHkiLCJjb250ZW50X2lkIjoyNTM1MzA5OTYsImNvbnRlbnRfdHlwZSI6IkFydGljbGUiLCJtYXRjaF9vcmRlciI6MSwiemRfdG9rZW4iOm51bGx9.v9QHIN8fJdtFSunfVQiLt2lxSl0cY2Cp5nPfVFqQI4U&zhida_source=entity)进行归一化
+
+6. 堆叠多个transformer层。
+
+7. 将最终hidden_states层映射到词表并计算概率分布。
 
 ### 第一步
 
@@ -157,3 +170,34 @@ Decoder block 第二个 Multi-Head Attention 变化不大， 主要的区别在�
 这样做的好处是在 Decoder 的时候，每一位单词都可以利用到 Encoder 所有单词的信息 (这些信息无需 **Mask**)。
 
 Decoder block 最后的部分是利用 Softmax 预测下一个单词，在之前的网络层我们可以得到一个最终的输出 Z，因为 Mask 的存在，使得单词 0 的输出 Z0 只包含单词 0 的信息，如
+## 训练和预测
+
+训练时：第i个decoder的输入 = encoder输出 + ground truth embeding
+预测时：第i个decoder的输入 = encoder输出 + 第(i-1)个decoder输出
+
+训练时因为知道ground truth embeding，相当于知道正确答案，网络可以一次训练完成。
+预测时，首先输入start，输出预测的第一个单词 然后start和新单词组成新的query，再输入decoder来预测下一个单词，循环往复 直至end
+
+## Decoder—Only
+
+​	1，decoder-only，采用**自回归方法**来逐个token生成输出；先prefill初始化第一个输入token的QKV-cache。然后进入decode阶段，根据当前的输入token，复用kv-cache逐个生成下一个token，	并使用新得qkv-cache更新；
+
+## deepseek架构
+
+1，模型层面主要是：模型结构上，采用MLA代替MHA, 减少了KV-cache的大小，减少了内存占用；采用MoE架构，在与dense模型的同等参数量级下，减少计算量。 模型压缩上，主要是采用FP8量化权重，同时对KV-cache也进行了量化，配合支持FP8计算的GPU架构，可以减少内存占用的同时，提升计算效率。
+
+系统层面主要是：训练MTP模块用于投机采样，能够提升1.8倍decoding效率；采用PD分离的架构，配合一系列并行策略、通信优化、专家负载均衡、overlap计算与通性等手段，共同提升系统的推理效率。
+
+​		2，MOE架构构成：共享专家（总机接待员（Gate）会根据来电者的需求将电话路由到相应的专业部门）和路由专家（负责处理特定类型的输入），
+
+​				MOE流程：1，路由，计算每个词与各个专家的得分。
+
+​								    2，选择，gate网格为每个词选择top-k个最合适专家；
+
+​									3，专家处理，被选中的路由专家以及共享专家会对输入进行处理，提取特										征
+
+​									4，加权与聚合， 每个路由专家的输出会根据 Gate 网络给出的权重进行加										权，然后与共享专家的输出进行聚合，形成 MoE 层的最终输出
+
+​				案例：“我非常高兴地收到了一个礼物” ，“我”会被分配到实体专家，“非常高兴会被分配到情感专家”，收到会被分配到语义词义专家；
+
+3，GRPO算法通过构建图结构的知识索引和采用检索-推理-剪枝机制，显著提升了多跳问答任务的性能，复杂的问答任务时，GRPO首先通过词汇或语义相似性检索初始文本片段，由图结构和LLM推理共同引导
